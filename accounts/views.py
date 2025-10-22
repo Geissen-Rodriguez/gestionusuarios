@@ -1,20 +1,18 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth.views import LoginView
-from django.views.generic import TemplateView, FormView
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.views import LoginView, LogoutView
+from django.views.generic import DetailView, FormView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django import forms
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import get_user_model, authenticate, logout
 from django.urls import reverse_lazy
 from django.http import HttpResponseForbidden
-from django.contrib.auth.views import LogoutView
+from .models import RecoveryToken
 
 import random
 
-# Create your views here.
-
 User = get_user_model()
 
-
+# Vista de login con bloqueo por intentos fallidos
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
     redirect_authenticated_user = True
@@ -22,52 +20,84 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         return reverse_lazy('bienvenida', kwargs={'pk': self.request.user.pk})
 
-    def form_valid(self, form):
-        # After successful authentication, check if user is blocked
-        response = super().form_valid(form)
-        user = self.request.user
-        if getattr(user, 'bloqueado', False):
-            logout(self.request)
-            # Render login again with an error message
-            return render(self.request, self.template_name, {'form': form, 'error': 'Cuenta bloqueada.'})
-        return response
+    def post(self, request, *args, **kwargs):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = User.objects.filter(username=username).first()
 
+        if user:
+            if user.bloqueado:
+                return render(request, self.template_name, {
+                    'form': self.get_form(),
+                    'error': 'Tu cuenta está bloqueada.'
+                })
 
-class BienvenidaView(LoginRequiredMixin, TemplateView):
+            auth_user = authenticate(request, username=username, password=password)
+            if auth_user:
+                user.intentos_fallidos = 0
+                user.save()
+                return super().post(request, *args, **kwargs)
+            else:
+                user.intentos_fallidos += 1
+                if user.intentos_fallidos >= 3:
+                    user.bloqueado = True
+                    user.save()
+                    return render(request, self.template_name, {
+                        'form': self.get_form(),
+                        'error': 'Su cuenta ha sido bloqueada despues de 3 intentos fallidos.'
+                    })
+                user.save()
+                return render(request, self.template_name, {
+                    'form': self.get_form(),
+                    'error': f'Credenciales incorrectas. Le quedan {3 - user.intentos_fallidos} intentos.'
+                })
+
+        return render(request, self.template_name, {
+            'form': self.get_form(),
+            'error': 'Usuario no encontrado.'
+        })
+
+# Vista de bienvenida protegida
+class BienvenidaView(LoginRequiredMixin, DetailView):
+    model = User
     template_name = 'accounts/bienvenida.html'
+    context_object_name = 'user'
 
-    def dispatch(self, request, *args, **kwargs):
-        # Ensure the pk in URL matches logged-in user
-        try:
-            pk = int(kwargs.get('pk', 0))
-        except (TypeError, ValueError):
-            pk = 0
-        if pk != request.user.pk:
-            return HttpResponseForbidden("No tienes permiso para ver esta página.")
-        return super().dispatch(request, *args, **kwargs)
+    def get_object(self, queryset=None):
+        return self.request.user
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['user'] = self.request.user
-        return ctx
-
-
+# Formulario de recuperación
 class RecuperacionForm(forms.Form):
     email = forms.EmailField(label='Correo electrónico')
 
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        user = User.objects.filter(email=email).first()
+        if not user:
+            raise forms.ValidationError('No existe un usuario con este correo.')
+        return email
 
 class RecuperacionView(FormView):
     template_name = 'accounts/recuperacion.html'
     form_class = RecuperacionForm
 
     def form_valid(self, form):
-        # Simulate sending a 6-digit code to the user's email
+        email = form.cleaned_data['email']
+        user = User.objects.get(email=email)
         codigo = ''.join(str(random.randint(0, 9)) for _ in range(6))
+        
+        # Crear token único
+        RecoveryToken.objects.create(
+            user=user,
+            token=codigo
+        )
+        
         return render(self.request, 'accounts/codigo_enviado.html', {'codigo': codigo})
 
+# Vista de logout con soporte para GET
 class CustomLogoutView(LogoutView):
-    next_page = 'login'  # Redirige al login después de cerrar sesión
-    http_method_names = ['get', 'post']  # Permite tanto GET como POST
+    next_page = 'login'
+    http_method_names = ['get', 'post']
 
     def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)
