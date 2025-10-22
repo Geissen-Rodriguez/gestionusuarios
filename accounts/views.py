@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import DetailView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
