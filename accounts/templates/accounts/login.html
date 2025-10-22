@@ -5,6 +5,9 @@
 {% block content %}
 <div class="card p-4 shadow-sm">
   <h2 class="mb-4">Iniciar sesión</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
   <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
