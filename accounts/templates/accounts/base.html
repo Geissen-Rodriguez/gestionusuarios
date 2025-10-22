@@ -6,9 +6,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         h1, h2, h3, h4, h5 { color: #2191FB; }
-        input, textarea { background-color: #B2ECE1; color: #fff; }
+        input, textarea { 
+            background-color: #B2ECE1 !important; 
+            color: #fff !important; 
+        }
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7) !important;
+        }
         p { color: #000; }
-        label { color: #bebebe; }
+        label { color: #bebebe !important; }
+        .card { border-radius: 10px; }
+        .alert { margin-bottom: 1rem; }
     </style>
 </head>
 <body>
