@@ -1,0 +1,10 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}Bienvenida{% endblock %}
+
+{% block content %}
+<div class="card p-4 shadow-sm">
+  <h2 class="mb-4">Bienvenido</h2>
+  <p>Usuario <strong>{{ user.username }}</strong> con cargo <strong>{{ user.get_cargo_display }}</strong> ha ingresado al sistema.</p>
+</div>
+{% endblock %}
