@@ -1,12 +1,11 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render
 from django.contrib.auth.views import LoginView, LogoutView
-from django.views.generic import DetailView, FormView, UpdateView
+from django.views.generic import DetailView, FormView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django import forms
-from django.contrib.auth import get_user_model, authenticate, logout
+from django.contrib.auth import get_user_model, authenticate
 from django.urls import reverse_lazy
-from django.http import HttpResponseForbidden
 from .models import RecoveryToken
+from .forms import LoginForm, RecuperacionForm
 
 import random
 
@@ -15,6 +14,7 @@ User = get_user_model()
 # Vista de login con bloqueo por intentos fallidos
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
+    form_class = LoginForm
     redirect_authenticated_user = True
 
     def get_success_url(self):
@@ -66,20 +66,11 @@ class BienvenidaView(LoginRequiredMixin, DetailView):
     def get_object(self, queryset=None):
         return self.request.user
 
-# Formulario de recuperación
-class RecuperacionForm(forms.Form):
-    email = forms.EmailField(label='Correo electrónico')
-
-    def clean_email(self):
-        email = self.cleaned_data['email']
-        user = User.objects.filter(email=email).first()
-        if not user:
-            raise forms.ValidationError('No existe un usuario con este correo.')
-        return email
-
+# Vista de recuperación de contraseña
 class RecuperacionView(FormView):
     template_name = 'accounts/recuperacion.html'
     form_class = RecuperacionForm
+    success_url = reverse_lazy('codigo_enviado')
 
     def form_valid(self, form):
         email = form.cleaned_data['email']
