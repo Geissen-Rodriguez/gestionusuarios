@@ -1,0 +1,14 @@
+# Ignorar archivos compilados de Python
+__pycache__/
+*.py[cod]
+
+# Base de datos local
+db.sqlite3
+
+# Archivos de entorno
+.env
+
+# Archivos temporales
+*.log
+*.tmp
+*.bak
