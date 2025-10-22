@@ -6,6 +6,7 @@ from django import forms
 from django.contrib.auth import get_user_model, logout
 from django.urls import reverse_lazy
 from django.http import HttpResponseForbidden
+from django.contrib.auth.views import LogoutView
 
 import random
 
@@ -63,3 +64,10 @@ class RecuperacionView(FormView):
         # Simulate sending a 6-digit code to the user's email
         codigo = ''.join(str(random.randint(0, 9)) for _ in range(6))
         return render(self.request, 'accounts/codigo_enviado.html', {'codigo': codigo})
+
+class CustomLogoutView(LogoutView):
+    next_page = 'login'  # Redirige al login después de cerrar sesión
+    http_method_names = ['get', 'post']  # Permite tanto GET como POST
+
+    def get(self, request, *args, **kwargs):
+        return self.post(request, *args, **kwargs)
