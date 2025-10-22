@@ -4,14 +4,17 @@
 
 {% block content %}
 <div class="card p-4 shadow-sm">
-  <h2 class="mb-4">Iniciar sesión</h2>
+  <h2 class="mb-4">Iniciar sesion</h2>
   {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
   {% endif %}
   <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Entrar</button>
+    <div class="d-flex justify-content-between align-items-center">
+      <button type="submit" class="btn btn-primary">Entrar</button>
+      <a href="{% url 'recuperacion' %}" class="text-decoration-none">Olvide mi clave</a>
+    </div>
   </form>
 </div>
 {% endblock %}
